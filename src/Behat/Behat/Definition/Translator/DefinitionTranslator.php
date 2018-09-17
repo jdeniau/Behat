@@ -27,6 +27,11 @@ final class DefinitionTranslator
     private $translator;
 
     /**
+     * @var array
+     */
+    private $definitionCache = array();
+
+    /**
      * Initialises definition translator.
      *
      * @param TranslatorInterface $translator
@@ -50,12 +55,18 @@ final class DefinitionTranslator
         $assetsId = $suite->getName();
         $pattern = $definition->getPattern();
 
-        $translatedPattern = $this->translator->trans($pattern, array(), $assetsId, $language);
-        if ($pattern != $translatedPattern) {
-            return new TranslatedDefinition($definition, $translatedPattern, $language);
+        $key = md5(json_encode([$assetsId, $pattern, $language]));
+
+        if (!isset($this->definitionCache[$key])) {
+            $translatedPattern = $this->translator->trans($pattern, [], $assetsId, $language);
+            if ($pattern != $translatedPattern) {
+                $this->definitionCache[$key] = new TranslatedDefinition($definition, $translatedPattern, $language);
+            } else {
+                $this->definitionCache[$key] = $definition;
+            }
         }
 
-        return $definition;
+        return $this->definitionCache[$key];
     }
 
     public function getLocale()

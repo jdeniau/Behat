@@ -12,10 +12,10 @@ namespace Behat\Behat\Transformation\Transformer;
 
 use Behat\Behat\Definition\Call\DefinitionCall;
 use Behat\Behat\Definition\Pattern\PatternTransformer;
-use Behat\Behat\Transformation\SimpleArgumentTransformation;
-use Behat\Behat\Transformation\Transformation\PatternTransformation;
 use Behat\Behat\Transformation\RegexGenerator;
+use Behat\Behat\Transformation\SimpleArgumentTransformation;
 use Behat\Behat\Transformation\Transformation;
+use Behat\Behat\Transformation\Transformation\PatternTransformation;
 use Behat\Behat\Transformation\TransformationRepository;
 use Behat\Gherkin\Node\ArgumentInterface;
 use Behat\Testwork\Call\CallCenter;
@@ -44,6 +44,11 @@ final class RepositoryArgumentTransformer implements ArgumentTransformer, RegexG
      * @var TranslatorInterface
      */
     private $translator;
+
+    /**
+     * @var array
+     */
+    private $regexCache = array();
 
     /**
      * Initializes transformer.
@@ -94,12 +99,17 @@ final class RepositoryArgumentTransformer implements ArgumentTransformer, RegexG
      */
     public function generateRegex($suiteName, $pattern, $language)
     {
-        $translatedPattern = $this->translator->trans($pattern, array(), $suiteName, $language);
-        if ($pattern == $translatedPattern) {
-            return $this->patternTransformer->transformPatternToRegex($pattern);
+        $key = md5(json_encode([$pattern, $suiteName, $language]));
+        if (!isset($this->regexCache[$key])) {
+            $translatedPattern = $this->translator->trans($pattern, [], $suiteName, $language);
+            if ($pattern == $translatedPattern) {
+                $this->regexCache[$key] = $this->patternTransformer->transformPatternToRegex($pattern);
+            } else {
+                $this->regexCache[$key] = $this->patternTransformer->transformPatternToRegex($translatedPattern);
+            }
         }
 
-        return $this->patternTransformer->transformPatternToRegex($translatedPattern);
+        return $this->regexCache[$key];
     }
 
     /**
